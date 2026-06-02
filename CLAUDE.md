@@ -77,7 +77,10 @@ Unit and integration tests are expected alongside implementation — not as an a
 Husky runs lint-staged on every commit. Never bypass with `--no-verify`.
 
 ### No automatic commits
-Do not create git commits without explicit user approval. Present the diff and wait for the green light.
+Do not create git commits without explicit user approval. Before committing, explain what will be committed and why, then wait for the green light. This applies to subagents too — never commit as the final step of a task without surfacing it first.
+
+### Documentation before commits
+Before any commit, verify that the relevant documentation is aligned with the code: stage checklists (`docs/stages/`), `README.md`, and `docs/architecture.md`. If a stage is complete, mark its checkboxes. If the README references incorrect commands, credentials, or missing setup steps, update it. Documentation drift is a bug.
 
 ### Plan before non-trivial work
 For tasks spanning 3+ steps or that involve architectural decisions, present a plan and get approval before writing code.
