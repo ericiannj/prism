@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { Nav } from "./components/Nav";
 import { DocumentsPage } from "./pages/DocumentsPage";
+import { ChatPage } from "./pages/ChatPage";
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
             }
           />
           <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/chat" element={<ChatPage />} />
         </Routes>
       </main>
     </div>
