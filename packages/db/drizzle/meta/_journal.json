@@ -15,6 +15,13 @@
       "when": 1780666072325,
       "tag": "0001_kind_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780690876952,
+      "tag": "0002_green_giant_man",
+      "breakpoints": true
     }
   ]
 }

@@ -46,3 +46,34 @@ export const documentChunks = pgTable(
     index("document_chunks_user_id_idx").on(table.userId),
   ]
 );
+
+export const messageRoleEnum = pgEnum("message_role", ["user", "assistant"]);
+export const messageSourceEnum = pgEnum("message_source", [
+  "parametric",
+  "embeddings",
+  "web",
+  "mixed",
+]);
+
+export const chatSessions = pgTable(
+  "chat_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id").notNull(),
+    title: text("title").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("chat_sessions_user_id_idx").on(table.userId)]
+);
+
+export const messages = pgTable("messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sessionId: uuid("session_id")
+    .notNull()
+    .references(() => chatSessions.id, { onDelete: "cascade" }),
+  role: messageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  source: messageSourceEnum("source"),
+  toolCalls: jsonb("tool_calls"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
