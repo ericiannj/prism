@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import { documentsRouter } from "./routes/documents.js";
+import { chatRouter } from "./routes/chat.js";
 
 export function createApp(): Express {
   const app = express();
@@ -12,6 +13,7 @@ export function createApp(): Express {
   });
 
   app.use("/documents", documentsRouter);
+  app.use("/chat", chatRouter);
 
   return app;
 }
