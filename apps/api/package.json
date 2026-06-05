@@ -24,6 +24,7 @@
     "@types/node": "^22.10.2",
     "@types/pdf-parse": "^1.1.4",
     "@types/supertest": "^6.0.2",
+    "drizzle-orm": "^0.38.4",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",
     "vitest": "^2.1.8"
