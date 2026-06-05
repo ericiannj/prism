@@ -61,6 +61,8 @@
     --source-document-fg: 199 90% 12%;
     --source-web: 38 90% 50%;
     --source-web-fg: 38 90% 12%;
+    --source-mixed: 300 60% 55%;
+    --source-mixed-fg: 0 0% 100%;
   }
 
   * {

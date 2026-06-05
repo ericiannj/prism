@@ -31,6 +31,8 @@ const badgeVariants = cva(
           "border-transparent bg-[hsl(var(--source-document)/0.15)] text-[hsl(var(--source-document))] border-[hsl(var(--source-document)/0.3)]",
         "source-web":
           "border-transparent bg-[hsl(var(--source-web)/0.15)] text-[hsl(var(--source-web))] border-[hsl(var(--source-web)/0.3)]",
+        "source-mixed":
+          "border-transparent bg-[hsl(var(--source-mixed)/0.15)] text-[hsl(var(--source-mixed))] border-[hsl(var(--source-mixed)/0.3)]",
       },
     },
     defaultVariants: {
