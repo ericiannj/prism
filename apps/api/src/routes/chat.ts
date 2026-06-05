@@ -45,7 +45,7 @@ router.post("/", async (req, res) => {
     await persistExchange(resolvedSessionId, message, content, source, toolCalls);
 
     res.write(
-      `data: ${JSON.stringify({ type: "done", sessionId: resolvedSessionId, source })}\n\n`
+      `data: ${JSON.stringify({ type: "done", sessionId: resolvedSessionId, source, toolCalls })}\n\n`
     );
   } catch {
     res.write(`data: ${JSON.stringify({ type: "error", error: "Chat failed" })}\n\n`);

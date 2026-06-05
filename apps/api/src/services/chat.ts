@@ -1,8 +1,8 @@
 import { db, chatSessions, messages } from "@prism/db";
 import { eq, asc } from "drizzle-orm";
-import { TOOL_DEFINITIONS, executeSearchEmbeddings } from "../lib/tools.js";
+import { TOOL_DEFINITIONS, executeSearchEmbeddings, executeSearchWeb } from "../lib/tools.js";
 
-type MessageSource = "parametric" | "embeddings";
+type MessageSource = "parametric" | "embeddings" | "web" | "mixed";
 
 export interface OpenRouterMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -17,6 +17,13 @@ export interface ToolCall {
   function: { name: string; arguments: string };
 }
 
+export interface StoredToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+  result: string;
+}
+
 interface LLMResponse {
   choices: Array<{
     message: {
@@ -28,7 +35,11 @@ interface LLMResponse {
   }>;
 }
 
-export const SYSTEM_PROMPT = `You are a helpful AI assistant with access to the user's personal document library via the search_embeddings tool. When the user asks about their documents, their knowledge base, or topics that might be covered in their uploaded files, call search_embeddings first. For general knowledge questions that don't require their documents, answer directly.`;
+export const SYSTEM_PROMPT = `You are a helpful AI assistant with access to two tools:
+- search_embeddings: searches the user's personal document library using semantic similarity. Use when the user asks about their documents or uploaded files.
+- search_web: searches the web for current information. Use when the question requires up-to-date or external information not covered in the user's documents.
+
+For general knowledge questions that require neither tool, answer directly.`;
 
 async function callOpenRouter(msgs: OpenRouterMessage[]): Promise<LLMResponse> {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -58,8 +69,8 @@ async function callOpenRouter(msgs: OpenRouterMessage[]): Promise<LLMResponse> {
 export async function runAgentLoop(
   conversationMessages: OpenRouterMessage[],
   userId: string
-): Promise<{ content: string; source: MessageSource; toolCalls: ToolCall[] }> {
-  const allToolCalls: ToolCall[] = [];
+): Promise<{ content: string; source: MessageSource; toolCalls: StoredToolCall[] }> {
+  const allToolCalls: StoredToolCall[] = [];
   const toolsUsed = new Set<string>();
   const loop = [...conversationMessages];
 
@@ -70,23 +81,39 @@ export async function runAgentLoop(
 
     if (choice.finish_reason === "tool_calls" && choice.message.tool_calls?.length) {
       const toolCalls = choice.message.tool_calls;
-      allToolCalls.push(...toolCalls);
       loop.push({ role: "assistant", content: null, tool_calls: toolCalls });
 
       for (const tc of toolCalls) {
         toolsUsed.add(tc.function.name);
-        const args = JSON.parse(tc.function.arguments) as {
-          query: string;
-          limit?: number;
-        };
-        const result = await executeSearchEmbeddings(args.query, userId, args.limit ?? 5);
+        let result: string;
+
+        if (tc.function.name === "search_embeddings") {
+          const args = JSON.parse(tc.function.arguments) as { query: string; limit?: number };
+          result = await executeSearchEmbeddings(args.query, userId, args.limit ?? 5);
+        } else if (tc.function.name === "search_web") {
+          const args = JSON.parse(tc.function.arguments) as { query: string };
+          result = await executeSearchWeb(args.query);
+        } else {
+          result = `Unknown tool: ${tc.function.name}`;
+        }
+
+        allToolCalls.push({ ...tc, result });
         loop.push({ role: "tool", content: result, tool_call_id: tc.id });
       }
     } else {
       const content = choice.message.content ?? "";
-      const source: MessageSource = toolsUsed.has("search_embeddings")
-        ? "embeddings"
-        : "parametric";
+
+      let source: MessageSource;
+      if (toolsUsed.has("search_embeddings") && toolsUsed.has("search_web")) {
+        source = "mixed";
+      } else if (toolsUsed.has("search_web")) {
+        source = "web";
+      } else if (toolsUsed.has("search_embeddings")) {
+        source = "embeddings";
+      } else {
+        source = "parametric";
+      }
+
       return { content, source, toolCalls: allToolCalls };
     }
   }
@@ -122,7 +149,7 @@ export async function persistExchange(
   userContent: string,
   assistantContent: string,
   source: MessageSource,
-  toolCalls: ToolCall[]
+  toolCalls: StoredToolCall[]
 ): Promise<void> {
   await db.insert(messages).values([
     { sessionId, role: "user", content: userContent },

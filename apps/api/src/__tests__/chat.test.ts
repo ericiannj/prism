@@ -59,6 +59,7 @@ describe("Chat routes (integration)", () => {
     expect(body).toContain('"type":"token"');
     expect(body).toContain('"type":"done"');
     expect(body).toContain('"source":"parametric"');
+    expect(body).toContain('"toolCalls":[]');
     expect(body).toContain('"sessionId"');
   });
 
