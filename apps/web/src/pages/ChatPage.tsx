@@ -73,13 +73,19 @@ export function ChatPage() {
           accumulatedContent += token;
           setStreamingContent(accumulatedContent);
         },
-        onDone({ sessionId, source }) {
+        onDone({ sessionId, source, toolCalls }) {
+          const validSource = (["parametric", "embeddings", "web", "mixed"] as const).includes(
+            source as ChatMessage["source"] & string
+          )
+            ? (source as NonNullable<ChatMessage["source"]>)
+            : undefined;
           const assistantMessage: ChatMessage = {
             id: `tmp-asst-${Date.now()}`,
             sessionId,
             role: "assistant",
             content: accumulatedContent,
-            source: source as ChatMessage["source"],
+            ...(validSource !== undefined ? { source: validSource } : {}),
+            ...(toolCalls !== undefined ? { toolCalls: toolCalls ?? null } : {}),
             createdAt: new Date().toISOString(),
           };
           setMessages((prev) => [...prev, assistantMessage]);

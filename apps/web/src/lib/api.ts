@@ -35,13 +35,20 @@ export interface ChatSession {
   createdAt: string;
 }
 
+export interface StoredToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+  result: string;
+}
+
 export interface ChatMessage {
   id: string;
   sessionId: string;
   role: "user" | "assistant";
   content: string;
   source?: "parametric" | "embeddings" | "web" | "mixed";
-  toolCalls?: unknown;
+  toolCalls?: StoredToolCall[] | null;
   createdAt: string;
 }
 
@@ -59,7 +66,11 @@ export async function getMessages(sessionId: string): Promise<ChatMessage[]> {
 
 export interface StreamCallbacks {
   onToken: (token: string) => void;
-  onDone: (result: { sessionId: string; source: string }) => void;
+  onDone: (result: {
+    sessionId: string;
+    source: string;
+    toolCalls: StoredToolCall[] | undefined;
+  }) => void;
   onError: (error: string) => void;
 }
 
@@ -95,6 +106,7 @@ export async function sendMessage(
         content?: string;
         sessionId?: string;
         source?: string;
+        toolCalls?: StoredToolCall[];
         error?: string;
       };
 
@@ -102,7 +114,11 @@ export async function sendMessage(
         callbacks.onToken(payload.content);
       }
       if (payload.type === "done" && payload.sessionId && payload.source) {
-        callbacks.onDone({ sessionId: payload.sessionId, source: payload.source });
+        callbacks.onDone({
+          sessionId: payload.sessionId,
+          source: payload.source,
+          toolCalls: payload.toolCalls,
+        });
       }
       if (payload.type === "error") {
         callbacks.onError(payload.error ?? "Unknown error");
