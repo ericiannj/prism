@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 222 20% 8%;
+    --foreground: 210 20% 95%;
+
+    --surface: 222 20% 11%;
+    --surface-elevated: 222 20% 15%;
+
+    /* Card */
+    --card: 222 20% 11%;
+    --card-foreground: 210 20% 95%;
+
+    /* Popover */
+    --popover: 222 20% 15%;
+    --popover-foreground: 210 20% 95%;
+
+    /* Primary — violet */
+    --primary: 263 75% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary */
+    --secondary: 222 20% 18%;
+    --secondary-foreground: 210 20% 80%;
+
+    /* Muted */
+    --muted: 222 20% 14%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent — violet */
+    --accent: 263 75% 65%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border / Input / Ring */
+    --border: 222 20% 20%;
+    --input: 222 20% 20%;
+    --ring: 263 75% 65%;
+
+    --radius: 0.5rem;
+
+    /* Status tokens */
+    --status-processing: 38 90% 50%;
+    --status-processing-fg: 38 90% 12%;
+    --status-ready: 142 69% 48%;
+    --status-ready-fg: 142 69% 12%;
+    --status-error: 0 70% 55%;
+    --status-error-fg: 0 0% 100%;
+
+    /* Source tokens */
+    --source-parametric: 263 75% 65%;
+    --source-parametric-fg: 0 0% 100%;
+    --source-document: 199 90% 50%;
+    --source-document-fg: 199 90% 12%;
+    --source-web: 38 90% 50%;
+    --source-web-fg: 38 90% 12%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Geist", sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
