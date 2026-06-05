@@ -60,3 +60,62 @@ describe("executeSearchEmbeddings", () => {
     expect(result).toBe("No relevant documents found.");
   });
 });
+
+describe("executeSearchWeb", () => {
+  beforeEach(() => {
+    process.env.TAVILY_API_KEY = "test-tavily-key";
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    delete process.env.TAVILY_API_KEY;
+    vi.unstubAllGlobals();
+  });
+
+  it("returns formatted results with title, url, and content", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              title: "AI News",
+              url: "https://example.com/ai",
+              content: "Latest developments in AI.",
+            },
+            {
+              title: "Tech Trends",
+              url: "https://example.com/tech",
+              content: "Top tech trends this week.",
+            },
+          ],
+        }),
+      })
+    );
+
+    const { executeSearchWeb } = await import("../lib/tools.js");
+    const result = await executeSearchWeb("AI news this week");
+
+    expect(result).toContain("[1]");
+    expect(result).toContain("AI News");
+    expect(result).toContain("https://example.com/ai");
+    expect(result).toContain("Latest developments in AI.");
+    expect(result).toContain("[2]");
+    expect(result).toContain("Tech Trends");
+  });
+
+  it("returns fallback string when no results", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ results: [] }),
+      })
+    );
+
+    const { executeSearchWeb } = await import("../lib/tools.js");
+    const result = await executeSearchWeb("something totally obscure");
+    expect(result).toBe("No web results found.");
+  });
+});
