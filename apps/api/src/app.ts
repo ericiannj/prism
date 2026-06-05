@@ -1,8 +1,10 @@
-import express from "express";
+import express, { type Express } from "express";
+import cors from "cors";
 import { documentsRouter } from "./routes/documents.js";
 
-export function createApp() {
+export function createApp(): Express {
   const app = express();
+  app.use(cors({ origin: "http://localhost:5173" }));
   app.use(express.json());
 
   app.get("/health", (_req, res) => {

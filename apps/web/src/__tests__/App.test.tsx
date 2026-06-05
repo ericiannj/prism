@@ -1,10 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { App } from "../App.tsx";
+import { MemoryRouter } from "react-router-dom";
+import { App } from "../App";
 
 describe("App", () => {
-  it("renders the Prism heading", () => {
-    render(<App />);
-    expect(screen.getByText("Prism")).toBeInTheDocument();
+  it("renders the Prism heading on the root route", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <App />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("heading", { name: "Prism" })).toBeInTheDocument();
   });
 });

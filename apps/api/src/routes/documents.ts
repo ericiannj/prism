@@ -1,10 +1,11 @@
-import { Router } from "express";
+import { type IRouter, Router } from "express";
 import multer from "multer";
-import { db, documents } from "@prism/db";
-import { eq, desc } from "drizzle-orm";
+import { db, documents, documentChunks } from "@prism/db";
+import { eq, desc, count } from "drizzle-orm";
+import { getTableColumns } from "drizzle-orm/utils";
 import { ingestDocument } from "../services/ingestion.js";
 
-const router = Router();
+const router: IRouter = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -42,9 +43,14 @@ router.get("/", async (_req, res) => {
   const userId = process.env.DEV_USER_ID ?? "dev-user-1";
   try {
     const docs = await db
-      .select()
+      .select({
+        ...getTableColumns(documents),
+        chunkCount: count(documentChunks.id),
+      })
       .from(documents)
+      .leftJoin(documentChunks, eq(documentChunks.documentId, documents.id))
       .where(eq(documents.userId, userId))
+      .groupBy(documents.id)
       .orderBy(desc(documents.createdAt));
     return res.json(docs);
   } catch {
