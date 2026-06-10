@@ -4,12 +4,12 @@ import { MemoryRouter } from "react-router-dom";
 import { App } from "../App";
 
 describe("App", () => {
-  it("renders the Prism heading on the root route", () => {
+  it("renders the landing page on the root route", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <App />
       </MemoryRouter>
     );
-    expect(screen.getByRole("heading", { name: "Prism" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   });
 });

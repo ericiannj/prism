@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { Nav } from "./components/Nav";
+import { HomePage } from "./pages/HomePage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { ChatPage } from "./pages/ChatPage";
 
@@ -9,14 +10,7 @@ export function App() {
       <Nav />
       <main className="flex-1">
         <Routes>
-          <Route
-            path="/"
-            element={
-              <div className="flex items-center justify-center h-full py-32">
-                <h1 className="text-2xl font-semibold">Prism</h1>
-              </div>
-            }
-          />
+          <Route path="/" element={<HomePage />} />
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/chat" element={<ChatPage />} />
         </Routes>
