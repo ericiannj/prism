@@ -11,6 +11,48 @@ import {
 
 const router: IRouter = Router();
 
+/**
+ * @swagger
+ * /chat:
+ *   post:
+ *     summary: Send a message and receive a Server-Sent Events stream
+ *     tags: [Chat]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - message
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: The user's message text
+ *               sessionId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Existing session ID. Omit to start a new session.
+ *     responses:
+ *       '200':
+ *         description: >
+ *           Server-Sent Events stream (Content-Type: text/event-stream).
+ *           Each event is newline-delimited JSON prefixed with "data: ".
+ *           Event shapes:
+ *           { "type": "token", "content": "string" } — LLM text fragment;
+ *           { "type": "done", "sessionId": "uuid", "source": "parametric|rag|web", "toolCalls": ["string"] } — end of stream;
+ *           { "type": "error", "error": "string" } — on failure.
+ *         content:
+ *           text/event-stream:
+ *             schema:
+ *               type: string
+ *       '400':
+ *         description: Message is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post("/", async (req, res) => {
   const { sessionId, message } = req.body as {
     sessionId?: string;
@@ -54,6 +96,28 @@ router.post("/", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /chat/sessions:
+ *   get:
+ *     summary: List chat sessions for the current user
+ *     tags: [Chat]
+ *     responses:
+ *       '200':
+ *         description: Array of chat sessions ordered by creation date (newest first)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ChatSession'
+ *       '500':
+ *         description: Failed to fetch sessions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get("/sessions", async (_req, res) => {
   const userId = process.env.DEV_USER_ID ?? "dev-user-1";
   try {
@@ -68,6 +132,36 @@ router.get("/sessions", async (_req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /chat/{id}/messages:
+ *   get:
+ *     summary: Get messages for a chat session
+ *     tags: [Chat]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The chat session ID
+ *     responses:
+ *       '200':
+ *         description: Array of messages ordered by creation date (oldest first)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Message'
+ *       '500':
+ *         description: Failed to fetch messages
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get("/:id/messages", async (req, res) => {
   try {
     const msgs = await db

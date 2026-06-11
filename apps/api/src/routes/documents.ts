@@ -13,6 +13,48 @@ const upload = multer({
 
 const SUPPORTED_EXTENSIONS = [".pdf", ".txt", ".md"];
 
+/**
+ * @swagger
+ * /documents/ingest:
+ *   post:
+ *     summary: Ingest a document into the vector store
+ *     tags: [Documents]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: "Supported formats: .pdf, .txt, .md (max 10 MB)"
+ *     responses:
+ *       '201':
+ *         description: Document ingested and chunked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 document:
+ *                   $ref: '#/components/schemas/Document'
+ *       '400':
+ *         description: No file provided or unsupported file type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '500':
+ *         description: Ingestion failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post(
   "/ingest",
   (req, res, next) => {
@@ -39,6 +81,28 @@ router.post(
   }
 );
 
+/**
+ * @swagger
+ * /documents:
+ *   get:
+ *     summary: List all documents for the current user
+ *     tags: [Documents]
+ *     responses:
+ *       '200':
+ *         description: Array of documents with chunk counts, ordered by creation date (newest first)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/DocumentWithChunks'
+ *       '500':
+ *         description: Failed to fetch documents
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get("/", async (_req, res) => {
   const userId = process.env.DEV_USER_ID ?? "dev-user-1";
   try {
