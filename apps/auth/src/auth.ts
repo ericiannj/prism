@@ -11,6 +11,7 @@ export const auth = betterAuth({
     provider: "pg",
     schema: { user, session, account, verification, jwks },
   }),
+  trustedOrigins: ["http://localhost:5173"],
   emailAndPassword: { enabled: true },
   plugins: [jwt()],
   socialProviders: {
