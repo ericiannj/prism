@@ -1,7 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { Nav } from "../components/Nav";
+
+vi.mock("../lib/auth-client", () => ({
+  authClient: {
+    useSession: vi.fn(() => ({ data: null, isPending: false })),
+  },
+}));
 
 function renderNav(path = "/") {
   return render(

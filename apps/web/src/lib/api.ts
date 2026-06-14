@@ -1,4 +1,18 @@
+import { authClient } from "./auth-client";
+
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+
+async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
+  const { data, error } = await authClient.token();
+  const token = !error && data ? data.token : undefined;
+  return fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      ...options?.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+}
 
 export interface Document {
   id: string;
@@ -11,7 +25,7 @@ export interface Document {
 }
 
 export async function listDocuments(): Promise<Document[]> {
-  const res = await fetch(`${API_BASE}/documents`);
+  const res = await apiFetch("/documents");
   if (!res.ok) throw new Error("Failed to fetch documents");
   return res.json() as Promise<Document[]>;
 }
@@ -19,7 +33,7 @@ export async function listDocuments(): Promise<Document[]> {
 export async function ingest(file: File): Promise<Document> {
   const body = new FormData();
   body.append("file", file);
-  const res = await fetch(`${API_BASE}/documents/ingest`, { method: "POST", body });
+  const res = await apiFetch("/documents/ingest", { method: "POST", body });
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(data.error ?? "Ingestion failed");
@@ -53,13 +67,13 @@ export interface ChatMessage {
 }
 
 export async function listSessions(): Promise<ChatSession[]> {
-  const res = await fetch(`${API_BASE}/chat/sessions`);
+  const res = await apiFetch("/chat/sessions");
   if (!res.ok) throw new Error("Failed to fetch sessions");
   return res.json() as Promise<ChatSession[]>;
 }
 
 export async function getMessages(sessionId: string): Promise<ChatMessage[]> {
-  const res = await fetch(`${API_BASE}/chat/${sessionId}/messages`);
+  const res = await apiFetch(`/chat/${sessionId}/messages`);
   if (!res.ok) throw new Error("Failed to fetch messages");
   return res.json() as Promise<ChatMessage[]>;
 }
@@ -79,7 +93,7 @@ export async function sendMessage(
   sessionId: string | undefined,
   callbacks: StreamCallbacks
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/chat`, {
+  const res = await apiFetch("/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, message }),

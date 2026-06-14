@@ -59,9 +59,7 @@ describe("MessageBubble", () => {
   });
 
   it("renders assistant bubble with neutral fallback style when source is undefined", () => {
-    const { container } = render(
-      <MessageBubble message={makeMessage({ role: "assistant", source: undefined })} />
-    );
+    const { container } = render(<MessageBubble message={makeMessage({ role: "assistant" })} />);
     const bubble = container.querySelector(".max-w-\\[80\\%\\]");
     expect(bubble).not.toBeNull();
     expect(bubble?.className).toContain("bg-surface");

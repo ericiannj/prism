@@ -1,4 +1,5 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { authClient } from "../lib/auth-client";
 
 function PrismIcon() {
   return (
@@ -18,6 +19,14 @@ const active =
 const inactive = base + " font-medium text-muted-foreground hover:text-foreground";
 
 export function Nav() {
+  const { data: session } = authClient.useSession();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await authClient.signOut();
+    navigate("/login");
+  }
+
   return (
     <nav className="flex items-center justify-between px-8 h-[52px] border-b border-border bg-background/85 backdrop-blur-[12px] sticky top-0 z-10">
       <Link to="/" className="flex items-center gap-[9px]">
@@ -37,6 +46,14 @@ export function Nav() {
           Chat
         </NavLink>
       </div>
+      {session && (
+        <button
+          onClick={handleLogout}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Sign out
+        </button>
+      )}
     </nav>
   );
 }
