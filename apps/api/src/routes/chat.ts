@@ -1,6 +1,6 @@
 import { type IRouter, Router } from "express";
 import { db, chatSessions, messages } from "@prism/db";
-import { eq, desc, asc } from "drizzle-orm";
+import { eq, desc, asc, and } from "drizzle-orm";
 import {
   runAgentLoop,
   getOrCreateSession,
@@ -8,6 +8,7 @@ import {
   persistExchange,
   SYSTEM_PROMPT,
 } from "../services/chat.js";
+import type { AuthRequest } from "../middleware/auth.js";
 
 const router: IRouter = Router();
 
@@ -63,7 +64,7 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "Message is required" });
   }
 
-  const userId = process.env.DEV_USER_ID ?? "dev-user-1";
+  const userId = (req as AuthRequest).userId;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -118,8 +119,8 @@ router.post("/", async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/sessions", async (_req, res) => {
-  const userId = process.env.DEV_USER_ID ?? "dev-user-1";
+router.get("/sessions", async (req, res) => {
+  const userId = (req as AuthRequest).userId;
   try {
     const sessions = await db
       .select()
@@ -164,11 +165,26 @@ router.get("/sessions", async (_req, res) => {
  */
 router.get("/:id/messages", async (req, res) => {
   try {
+    const userId = (req as AuthRequest).userId;
+    const sessionId = req.params.id;
+
+    // Verify the session belongs to this user
+    const [session] = await db
+      .select()
+      .from(chatSessions)
+      .where(and(eq(chatSessions.id, sessionId), eq(chatSessions.userId, userId)))
+      .limit(1);
+
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
     const msgs = await db
       .select()
       .from(messages)
-      .where(eq(messages.sessionId, req.params.id))
+      .where(eq(messages.sessionId, sessionId))
       .orderBy(asc(messages.createdAt));
+
     return res.json(msgs);
   } catch {
     return res.status(500).json({ error: "Failed to fetch messages" });

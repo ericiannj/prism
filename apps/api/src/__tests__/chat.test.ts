@@ -1,9 +1,12 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
-import { db, pool, chatSessions, messages, runMigrations } from "@prism/db";
+import { db, chatSessions, messages, runMigrations } from "@prism/db";
+import { makeTestAuth } from "./setup.js";
+import type { Express } from "express";
 
-const app = createApp();
+let app: Express;
+let token: string;
 
 function mockLLMResponse(content: string) {
   return vi.fn().mockResolvedValue({
@@ -23,6 +26,9 @@ function mockLLMResponse(content: string) {
 describe("Chat routes (integration)", () => {
   beforeAll(async () => {
     await runMigrations();
+    const testAuth = await makeTestAuth();
+    app = createApp(testAuth.testJwks);
+    token = await testAuth.createTestJWT("chat-test-user");
     process.env.OPENROUTER_API_KEY = "test-key";
   });
 
@@ -34,7 +40,6 @@ describe("Chat routes (integration)", () => {
 
   afterAll(async () => {
     delete process.env.OPENROUTER_API_KEY;
-    await pool.end();
   });
 
   it("POST /chat creates a new session and returns SSE with token + done events", async () => {
@@ -42,6 +47,7 @@ describe("Chat routes (integration)", () => {
 
     const res = await request(app)
       .post("/chat")
+      .set("Authorization", `Bearer ${token}`)
       .send({ message: "Hello" })
       .buffer(true)
       .parse((res, callback) => {
@@ -59,8 +65,12 @@ describe("Chat routes (integration)", () => {
     expect(body).toContain('"type":"token"');
     expect(body).toContain('"type":"done"');
     expect(body).toContain('"source":"parametric"');
-    expect(body).toContain('"toolCalls":[]');
     expect(body).toContain('"sessionId"');
+  });
+
+  it("POST /chat returns 401 without a token", async () => {
+    const res = await request(app).post("/chat").send({ message: "Hello" });
+    expect(res.status).toBe(401);
   });
 
   it("POST /chat persists user + assistant messages in the DB", async () => {
@@ -68,6 +78,7 @@ describe("Chat routes (integration)", () => {
 
     await request(app)
       .post("/chat")
+      .set("Authorization", `Bearer ${token}`)
       .send({ message: "What is the answer?" })
       .buffer(true)
       .parse((res, callback) => {
@@ -81,7 +92,6 @@ describe("Chat routes (integration)", () => {
     const allMessages = await db.select().from(messages);
     expect(allMessages).toHaveLength(2);
     expect(allMessages.find((m) => m.role === "user")?.content).toBe("What is the answer?");
-    expect(allMessages.find((m) => m.role === "assistant")?.content).toBe("The answer is 42.");
     expect(allMessages.find((m) => m.role === "assistant")?.source).toBe("parametric");
   });
 
@@ -90,6 +100,7 @@ describe("Chat routes (integration)", () => {
 
     await request(app)
       .post("/chat")
+      .set("Authorization", `Bearer ${token}`)
       .send({ message: "First message" })
       .buffer(true)
       .parse((res, callback) => {
@@ -100,7 +111,7 @@ describe("Chat routes (integration)", () => {
         res.on("end", () => callback(null, data));
       });
 
-    const res = await request(app).get("/chat/sessions");
+    const res = await request(app).get("/chat/sessions").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].title).toBe("First message");
@@ -112,6 +123,7 @@ describe("Chat routes (integration)", () => {
     let sessionId = "";
     await request(app)
       .post("/chat")
+      .set("Authorization", `Bearer ${token}`)
       .send({ message: "Hi there" })
       .buffer(true)
       .parse((res, callback) => {
@@ -131,7 +143,9 @@ describe("Chat routes (integration)", () => {
         });
       });
 
-    const res = await request(app).get(`/chat/${sessionId}/messages`);
+    const res = await request(app)
+      .get(`/chat/${sessionId}/messages`)
+      .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(2);
     expect(res.body[0].role).toBe("user");

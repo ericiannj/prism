@@ -4,6 +4,7 @@ import { db, documents, documentChunks } from "@prism/db";
 import { eq, desc, count } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm/utils";
 import { ingestDocument } from "../services/ingestion.js";
+import type { AuthRequest } from "../middleware/auth.js";
 
 const router: IRouter = Router();
 const upload = multer({
@@ -71,7 +72,7 @@ router.post(
     if (!SUPPORTED_EXTENSIONS.includes(ext)) {
       return res.status(400).json({ error: "Unsupported file type" });
     }
-    const userId = process.env.DEV_USER_ID ?? "dev-user-1";
+    const userId = (req as AuthRequest).userId;
     try {
       const document = await ingestDocument(req.file, userId);
       return res.status(201).json({ document });
@@ -103,8 +104,8 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/", async (_req, res) => {
-  const userId = process.env.DEV_USER_ID ?? "dev-user-1";
+router.get("/", async (req, res) => {
+  const userId = (req as AuthRequest).userId;
   try {
     const docs = await db
       .select({
