@@ -41,27 +41,39 @@ Open http://localhost:5173
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` at the root. Variables added per stage:
+Copy `.env.example` to `.env` at the root.
 
 ```
-# v0.1 — available now
+# Database
 DATABASE_URL=postgresql://prism:prism@localhost:5432/prism
-DEV_USER_ID=dev-user-1
 
-# v0.2+ — needed for document ingestion and chat
+# LLM + embeddings (v0.2+)
 OPENROUTER_API_KEY=
 
-# v0.4+ — needed for web search
+# Web search (v0.4+)
 TAVILY_API_KEY=
 
-# v0.5+ — needed for auth
+# Auth — must be identical in apps/api and apps/auth (v0.5+)
 JWT_SECRET=
 BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=http://localhost:3001
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 ```
 
-> `JWT_SECRET` must be the same value in `apps/api` and `apps/auth` when auth is wired (v0.5).
+> Register at http://localhost:5173/register to create an account before using the app.
+
+## Production
+
+```bash
+# 1. Copy and fill in production env
+cp .env.prod.example .env.prod
+
+# 2. Build and start all services
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+The web app will be available at http://localhost (port 80).
 
 ## Architecture
 
