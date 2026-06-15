@@ -1,7 +1,7 @@
 import { type IRouter, Router } from "express";
 import multer from "multer";
 import { db, documents, documentChunks } from "@prism/db";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc, count, and } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm/utils";
 import { ingestDocument } from "../services/ingestion.js";
 import type { AuthRequest } from "../middleware/auth.js";
@@ -121,6 +121,25 @@ router.get("/", async (req, res) => {
   } catch {
     return res.status(500).json({ error: "Failed to fetch documents" });
   }
+});
+
+router.delete("/:id", async (req, res) => {
+  const userId = (req as AuthRequest).userId;
+  const { id } = req.params;
+
+  const [existing] = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(and(eq(documents.id, id), eq(documents.userId, userId)))
+    .limit(1);
+
+  if (!existing) {
+    return res.status(404).json({ error: "Document not found" });
+  }
+
+  await db.delete(documents).where(and(eq(documents.id, id), eq(documents.userId, userId)));
+
+  return res.status(204).send();
 });
 
 export { router as documentsRouter };

@@ -191,4 +191,32 @@ router.get("/:id/messages", async (req, res) => {
   }
 });
 
+router.patch("/sessions/:id", async (req, res) => {
+  const userId = (req as AuthRequest).userId;
+  const { id } = req.params;
+  const { title } = req.body as { title?: string };
+
+  if (!title?.trim()) {
+    return res.status(400).json({ error: "Title is required" });
+  }
+
+  const [existing] = await db
+    .select({ id: chatSessions.id })
+    .from(chatSessions)
+    .where(and(eq(chatSessions.id, id), eq(chatSessions.userId, userId)))
+    .limit(1);
+
+  if (!existing) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  const [updated] = await db
+    .update(chatSessions)
+    .set({ title: title.trim() })
+    .where(and(eq(chatSessions.id, id), eq(chatSessions.userId, userId)))
+    .returning();
+
+  return res.json(updated);
+});
+
 export { router as chatRouter };
