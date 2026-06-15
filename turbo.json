@@ -15,6 +15,10 @@
       "dependsOn": ["^build"],
       "inputs": ["src/**", "vitest.config.ts"]
     },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "vitest.config.ts"]
+    },
     "lint": {
       "inputs": ["src/**", "eslint.config.js", ".prettierrc"]
     }
