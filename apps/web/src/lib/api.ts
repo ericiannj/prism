@@ -42,6 +42,11 @@ export async function ingest(file: File): Promise<Document> {
   return data.document;
 }
 
+export async function deleteDocument(id: string): Promise<void> {
+  const res = await apiFetch(`/documents/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete document");
+}
+
 export interface ChatSession {
   id: string;
   userId: string;
@@ -70,6 +75,16 @@ export async function listSessions(): Promise<ChatSession[]> {
   const res = await apiFetch("/chat/sessions");
   if (!res.ok) throw new Error("Failed to fetch sessions");
   return res.json() as Promise<ChatSession[]>;
+}
+
+export async function renameSession(id: string, title: string): Promise<ChatSession> {
+  const res = await apiFetch(`/chat/sessions/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) throw new Error("Failed to rename session");
+  return res.json() as Promise<ChatSession>;
 }
 
 export async function getMessages(sessionId: string): Promise<ChatMessage[]> {

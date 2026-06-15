@@ -27,6 +27,7 @@ function makeDoc(overrides: Partial<Document> = {}): Document {
 describe("DocumentsPage", () => {
   beforeEach(() => {
     vi.mocked(api.listDocuments).mockResolvedValue([]);
+    vi.mocked(api.deleteDocument).mockResolvedValue(undefined);
   });
 
   it("renders the eyebrow label", async () => {
@@ -90,5 +91,30 @@ describe("DocumentsPage", () => {
       expect(screen.getByTestId("stat-chunks-value")).toHaveTextContent("10");
       expect(screen.getByTestId("stat-chunks-value")).not.toHaveTextContent("99");
     });
+  });
+
+  it("shows skeleton while loading", () => {
+    // listDocuments never resolves — loading state persists
+    vi.mocked(api.listDocuments).mockReturnValue(new Promise(() => {}));
+    render(
+      <MemoryRouter>
+        <DocumentsPage />
+      </MemoryRouter>
+    );
+    // 3 skeleton rows should be visible
+    const skeletons = document.querySelectorAll(".animate-pulse");
+    expect(skeletons.length).toBeGreaterThan(0);
+  });
+
+  it("renders DocumentList with onDelete when documents load", async () => {
+    vi.mocked(api.listDocuments).mockResolvedValue([makeDoc()]);
+    render(
+      <MemoryRouter>
+        <DocumentsPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(screen.getByText("test.pdf")).toBeInTheDocument());
+    // delete button should be present
+    expect(screen.getByRole("button", { name: /delete test\.pdf/i })).toBeInTheDocument();
   });
 });

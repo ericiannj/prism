@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Loader2, MoreHorizontal } from "lucide-react";
 import { Input } from "@prism/ui";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@prism/ui";
+import { toast } from "sonner";
 import {
   listSessions,
   getMessages,
   sendMessage,
   listDocuments,
+  renameSession,
   type ChatSession,
   type ChatMessage,
   type Document,
@@ -21,9 +29,11 @@ export function ChatPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [docStats, setDocStats] = useState<{ count: number; chunks: number } | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const skipBlurRef = useRef(false);
 
   const isInputEmpty = input.trim().length === 0;
   const showChips = isInputEmpty;
@@ -39,12 +49,11 @@ export function ChatPage() {
 
   async function selectSession(id: string) {
     setCurrentSessionId(id);
-    setError(null);
     try {
       const data = await getMessages(id);
       setMessages(data);
     } catch {
-      setError("Failed to load messages");
+      toast.error("Failed to load messages");
     }
   }
 
@@ -52,7 +61,21 @@ export function ChatPage() {
     setCurrentSessionId(null);
     setMessages([]);
     setInput("");
-    setError(null);
+  }
+
+  async function handleRename(id: string) {
+    const title = editingTitle.trim();
+    setEditingSessionId(null);
+    setEditingTitle("");
+    if (!title) return;
+    const current = sessions.find((s) => s.id === id);
+    if (title === current?.title) return;
+    try {
+      const updated = await renameSession(id, title);
+      setSessions((prev) => prev.map((s) => (s.id === id ? updated : s)));
+    } catch {
+      toast.error("Failed to rename session");
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -63,7 +86,6 @@ export function ChatPage() {
     setInput("");
     setIsStreaming(true);
     setStreamingContent("");
-    setError(null);
 
     const optimisticUser: ChatMessage = {
       id: `tmp-${Date.now()}`,
@@ -105,13 +127,13 @@ export function ChatPage() {
           }
         },
         onError(err) {
-          setError(err);
+          toast.error(err || "Chat failed");
           setIsStreaming(false);
           setStreamingContent("");
         },
       });
     } catch {
-      setError("Request failed");
+      toast.error("Request failed");
       setIsStreaming(false);
       setStreamingContent("");
     }
@@ -169,25 +191,76 @@ export function ChatPage() {
             <p className="text-xs text-muted-foreground px-2 py-3">No conversations yet.</p>
           )}
           {sessions.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => void selectSession(s.id)}
-              aria-current={s.id === currentSessionId ? "page" : undefined}
-              className={`relative w-full text-left pl-4 pr-3 py-2 rounded-md transition-colors text-[11px] truncate ${
-                s.id === currentSessionId
-                  ? "text-foreground bg-surface-elevated"
-                  : "text-muted-foreground hover:text-foreground hover:bg-surface"
-              }`}
-            >
-              {s.id === currentSessionId && (
-                <span
-                  className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full"
-                  style={{ background: "linear-gradient(to bottom, #9b6dff, #7c3aed)" }}
+            <div key={s.id} className="relative group flex items-center">
+              {editingSessionId === s.id ? (
+                <input
+                  value={editingTitle}
+                  autoFocus
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      skipBlurRef.current = true;
+                      void handleRename(s.id);
+                    }
+                    if (e.key === "Escape") {
+                      skipBlurRef.current = true;
+                      setEditingTitle("");
+                      setEditingSessionId(null);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (skipBlurRef.current) {
+                      skipBlurRef.current = false;
+                      return;
+                    }
+                    void handleRename(s.id);
+                  }}
+                  className="w-full text-left pl-4 pr-3 py-2 text-[11px] bg-surface-elevated border-none outline-none text-foreground rounded-md"
                 />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void selectSession(s.id)}
+                  aria-current={s.id === currentSessionId ? "page" : undefined}
+                  className={`relative flex-1 text-left pl-4 pr-7 py-2 rounded-md transition-colors text-[11px] truncate ${
+                    s.id === currentSessionId
+                      ? "text-foreground bg-surface-elevated"
+                      : "text-muted-foreground hover:text-foreground hover:bg-surface"
+                  }`}
+                >
+                  {s.id === currentSessionId && (
+                    <span
+                      className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full"
+                      style={{ background: "linear-gradient(to bottom, #9b6dff, #7c3aed)" }}
+                    />
+                  )}
+                  {s.title}
+                </button>
               )}
-              {s.title}
-            </button>
+              {editingSessionId !== s.id && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Session options"
+                      className="absolute right-1 p-1 opacity-0 group-hover:opacity-100 rounded text-muted-foreground hover:text-foreground transition-opacity focus:opacity-100"
+                    >
+                      <MoreHorizontal size={13} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditingSessionId(s.id);
+                        setEditingTitle(s.title);
+                      }}
+                    >
+                      Rename
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           ))}
         </nav>
       </aside>
@@ -303,9 +376,6 @@ export function ChatPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Error */}
-        {error && <p className="px-4 pb-2 text-xs text-destructive">{error}</p>}
-
         {/* Input */}
         <div className="px-4 pb-3 pt-2">
           <form onSubmit={(e) => void handleSubmit(e)}>
@@ -332,10 +402,14 @@ export function ChatPage() {
                   className="w-7 h-7 rounded-lg border-0 flex items-center justify-center shrink-0"
                   style={{
                     background: "linear-gradient(135deg, #7c3aed, #9b6dff)",
-                    opacity: isStreaming || isInputEmpty ? 0.4 : 1,
+                    opacity: isInputEmpty && !isStreaming ? 0.4 : 1,
                   }}
                 >
-                  <ArrowUp size={14} color="white" />
+                  {isStreaming ? (
+                    <Loader2 size={14} color="white" className="animate-spin" />
+                  ) : (
+                    <ArrowUp size={14} color="white" />
+                  )}
                 </button>
               </div>
 

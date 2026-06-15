@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { Nav } from "./components/Nav";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { HomePage } from "./pages/HomePage";
 import { DocumentsPage } from "./pages/DocumentsPage";
@@ -14,14 +15,37 @@ export function App() {
       <Nav />
       <main className="flex-1">
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/"
+            element={
+              <ErrorBoundary>
+                <HomePage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <ErrorBoundary>
+                <LoginPage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <ErrorBoundary>
+                <RegisterPage />
+              </ErrorBoundary>
+            }
+          />
           <Route
             path="/documents"
             element={
               <ProtectedRoute>
-                <DocumentsPage />
+                <ErrorBoundary>
+                  <DocumentsPage />
+                </ErrorBoundary>
               </ProtectedRoute>
             }
           />
@@ -29,7 +53,9 @@ export function App() {
             path="/chat"
             element={
               <ProtectedRoute>
-                <ChatPage />
+                <ErrorBoundary>
+                  <ChatPage />
+                </ErrorBoundary>
               </ProtectedRoute>
             }
           />
@@ -37,7 +63,9 @@ export function App() {
             path="/change-password"
             element={
               <ProtectedRoute>
-                <ChangePasswordPage />
+                <ErrorBoundary>
+                  <ChangePasswordPage />
+                </ErrorBoundary>
               </ProtectedRoute>
             }
           />

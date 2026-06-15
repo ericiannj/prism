@@ -6,6 +6,9 @@ import * as api from "../lib/api";
 import type { Document } from "../lib/api";
 
 vi.mock("../lib/api");
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 
 function makeDoc(overrides: Partial<Document> = {}): Document {
   return {
@@ -21,10 +24,17 @@ function makeDoc(overrides: Partial<Document> = {}): Document {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   // Default mocks: sessions = [], docs = [], sendMessage never resolves
   vi.mocked(api.listSessions).mockResolvedValue([]);
   vi.mocked(api.listDocuments).mockResolvedValue([]);
   vi.mocked(api.sendMessage).mockReturnValue(new Promise(() => {}));
+  vi.mocked(api.renameSession).mockResolvedValue({
+    id: "session-1",
+    userId: "u",
+    title: "Renamed",
+    createdAt: new Date().toISOString(),
+  });
 });
 
 describe("ChatPage empty state", () => {
@@ -98,5 +108,76 @@ describe("ChatPage input chips", () => {
     const input = screen.getByPlaceholderText("Ask something…");
     expect(input).toHaveValue("summarize my docs");
     expect(screen.queryByRole("button", { name: "summarize my docs" })).not.toBeInTheDocument();
+  });
+});
+
+describe("ChatPage rename session", () => {
+  beforeEach(() => {
+    vi.mocked(api.listSessions).mockResolvedValue([
+      { id: "session-1", userId: "u", title: "Old Title", createdAt: new Date().toISOString() },
+    ]);
+    vi.mocked(api.renameSession).mockResolvedValue({
+      id: "session-1",
+      userId: "u",
+      title: "Renamed",
+      createdAt: new Date().toISOString(),
+    });
+  });
+
+  it("shows session options button", async () => {
+    render(<ChatPage />);
+    await waitFor(() => expect(screen.getByText("Old Title")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /session options/i })).toBeInTheDocument();
+  });
+
+  it("shows rename input after clicking Rename in dropdown", async () => {
+    const user = userEvent.setup();
+    render(<ChatPage />);
+    await waitFor(() => expect(screen.getByText("Old Title")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /session options/i }));
+    await user.click(screen.getByText("Rename"));
+    expect(screen.getByDisplayValue("Old Title")).toBeInTheDocument();
+  });
+
+  it("calls renameSession on Enter and updates title in sidebar", async () => {
+    const user = userEvent.setup();
+    render(<ChatPage />);
+    await waitFor(() => expect(screen.getByText("Old Title")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /session options/i }));
+    await user.click(screen.getByText("Rename"));
+
+    const input = screen.getByDisplayValue("Old Title");
+    await user.clear(input);
+    await user.type(input, "Renamed{Enter}");
+
+    await waitFor(() => expect(api.renameSession).toHaveBeenCalledWith("session-1", "Renamed"));
+    await waitFor(() => expect(screen.getByText("Renamed")).toBeInTheDocument());
+  });
+
+  it("cancels rename on Escape without calling API", async () => {
+    const user = userEvent.setup();
+    render(<ChatPage />);
+    await waitFor(() => expect(screen.getByText("Old Title")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /session options/i }));
+    await user.click(screen.getByText("Rename"));
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(api.renameSession).not.toHaveBeenCalled());
+    expect(screen.getByText("Old Title")).toBeInTheDocument();
+  });
+
+  it("shows error toast when renameSession fails", async () => {
+    const { toast } = await import("sonner");
+    vi.mocked(api.renameSession).mockRejectedValue(new Error("network"));
+    const user = userEvent.setup();
+    render(<ChatPage />);
+    await waitFor(() => expect(screen.getByText("Old Title")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /session options/i }));
+    await user.click(screen.getByText("Rename"));
+
+    const input = screen.getByDisplayValue("Old Title");
+    await user.clear(input);
+    await user.type(input, "New Name{Enter}");
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to rename session"));
   });
 });

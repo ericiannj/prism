@@ -1,6 +1,16 @@
-import { FileText } from "lucide-react";
+import { useState } from "react";
+import { FileText, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@prism/ui";
 import type { BadgeProps } from "@prism/ui";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@prism/ui";
 import type { Document } from "../lib/api";
 
 const STATUS_VARIANT: Record<Document["status"], BadgeProps["variant"]> = {
@@ -45,9 +55,29 @@ function timeAgo(iso: string): string {
 
 interface Props {
   documents: Document[];
+  onDelete: (id: string) => Promise<void>;
 }
 
-export function DocumentList({ documents }: Props) {
+export function DocumentList({ documents, onDelete }: Props) {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const docToDelete = documents.find((d) => d.id === deletingId);
+
+  async function handleConfirmDelete() {
+    if (!deletingId) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(deletingId);
+      toast.success("Document deleted");
+      setDeletingId(null);
+    } catch {
+      toast.error("Failed to delete document");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   if (documents.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-8">
@@ -66,60 +96,108 @@ export function DocumentList({ documents }: Props) {
   const totalChunks = readyDocs.reduce((sum, d) => sum + d.chunkCount, 0);
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-          Indexed documents
-        </p>
-        <p data-testid="section-count" className="text-xs text-muted-foreground">
-          {documents.length} {documents.length === 1 ? "doc" : "docs"}
-          {totalChunks > 0 ? ` · ${totalChunks} chunks` : ""}
-        </p>
-      </div>
+    <>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+            Indexed documents
+          </p>
+          <p data-testid="section-count" className="text-xs text-muted-foreground">
+            {documents.length} {documents.length === 1 ? "doc" : "docs"}
+            {totalChunks > 0 ? ` · ${totalChunks} chunks` : ""}
+          </p>
+        </div>
 
-      <div className="flex flex-col gap-2">
-        {documents.map((doc) => (
-          <div
-            key={doc.id}
-            className="flex items-stretch rounded-lg overflow-hidden border border-border bg-surface"
-          >
-            <div className="w-1 flex-shrink-0" style={STRIPE_STYLE[doc.type]} />
+        <div className="flex flex-col gap-2">
+          {documents.map((doc) => (
+            <div
+              key={doc.id}
+              className="flex items-stretch rounded-lg overflow-hidden border border-border bg-surface"
+            >
+              <div className="w-1 flex-shrink-0" style={STRIPE_STYLE[doc.type]} />
 
-            <div className="flex flex-1 min-w-0 items-center gap-3 px-4 py-3">
-              <div
-                className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-[9px] font-extrabold"
-                style={ICON_STYLE[doc.type]}
-              >
-                {ICON_LABEL[doc.type]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">{doc.name}</p>
-                <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                  {doc.status === "processing" ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-[rgba(251,146,60,0.06)] text-[#fb923c] border border-[rgba(251,146,60,0.2)]">
-                      extracting & embedding…
-                    </span>
-                  ) : doc.status === "ready" ? (
-                    <>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-white/[0.04] text-muted-foreground border border-white/[0.07]">
-                        {doc.chunkCount} {doc.chunkCount === 1 ? "chunk" : "chunks"}
+              <div className="flex flex-1 min-w-0 items-center gap-3 px-4 py-3">
+                <div
+                  className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-[9px] font-extrabold"
+                  style={ICON_STYLE[doc.type]}
+                >
+                  {ICON_LABEL[doc.type]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{doc.name}</p>
+                  <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                    {doc.status === "processing" ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-[rgba(251,146,60,0.06)] text-[#fb923c] border border-[rgba(251,146,60,0.2)]">
+                        extracting & embedding…
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-white/[0.04] text-muted-foreground border border-white/[0.07]">
-                        {formatBytes(doc.sizeBytes)}
-                      </span>
-                    </>
-                  ) : null}
+                    ) : doc.status === "ready" ? (
+                      <>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-white/[0.04] text-muted-foreground border border-white/[0.07]">
+                          {doc.chunkCount} {doc.chunkCount === 1 ? "chunk" : "chunks"}
+                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-white/[0.04] text-muted-foreground border border-white/[0.07]">
+                          {formatBytes(doc.sizeBytes)}
+                        </span>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-col items-end justify-between px-4 py-3 flex-shrink-0 gap-1.5">
-              <Badge variant={STATUS_VARIANT[doc.status]}>{doc.status}</Badge>
-              <span className="text-[10px] text-muted-foreground">{timeAgo(doc.createdAt)}</span>
+              <div className="flex flex-col items-end justify-between px-4 py-3 flex-shrink-0 gap-1.5">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label={`Delete ${doc.name}`}
+                    onClick={() => setDeletingId(doc.id)}
+                    className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                  <Badge variant={STATUS_VARIANT[doc.status]}>{doc.status}</Badge>
+                </div>
+                <span className="text-[10px] text-muted-foreground">{timeAgo(doc.createdAt)}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+
+      <Dialog
+        open={deletingId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeletingId(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete document?</DialogTitle>
+            <DialogDescription>
+              <strong>{docToDelete?.name}</strong> and its {docToDelete?.chunkCount ?? 0}{" "}
+              {(docToDelete?.chunkCount ?? 0) === 1 ? "chunk" : "chunks"} will be permanently
+              removed from your knowledge base.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => setDeletingId(null)}
+              className="text-sm text-muted-foreground border border-border rounded-lg px-4 py-1.5 hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => void handleConfirmDelete()}
+              className="text-sm text-white bg-destructive rounded-lg px-4 py-1.5 hover:bg-destructive/90 transition-colors disabled:opacity-60"
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
