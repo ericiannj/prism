@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { authClient } from "../lib/auth-client";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -47,7 +48,7 @@ export function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="you@example.com"
             />
           </div>
@@ -62,7 +63,7 @@ export function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="••••••••"
             />
           </div>
@@ -87,15 +88,7 @@ export function LoginPage() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() =>
-            authClient.signIn.social({ provider: "google", callbackURL: "/documents" })
-          }
-          className="w-full rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
-        >
-          Continue with Google
-        </button>
+        <GoogleSignInButton />
       </div>
     </div>
   );
