@@ -18,7 +18,7 @@ export const TOOL_DEFINITIONS = [
     function: {
       name: "search_embeddings",
       description:
-        "Search the user's uploaded documents for content relevant to the query using semantic similarity. Call this when the user asks about their personal documents or knowledge base.",
+        "Search the user's personal document library for content relevant to the query. Call this FIRST for any question — the user may have uploaded documents on this topic. Prefer this over web search.",
       parameters: {
         type: "object",
         properties: {
@@ -40,7 +40,7 @@ export const TOOL_DEFINITIONS = [
     function: {
       name: "search_web",
       description:
-        "Search the web for current information, recent news, or topics not covered in the user's documents. Use when the question requires up-to-date or external information.",
+        "Search the web for current information, recent news, or external data. Use only when search_embeddings returned no relevant results or the user explicitly asks for real-time/external information.",
       parameters: {
         type: "object",
         properties: {

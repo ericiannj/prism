@@ -36,10 +36,18 @@ interface LLMResponse {
 }
 
 export const SYSTEM_PROMPT = `You are a helpful AI assistant with access to two tools:
-- search_embeddings: searches the user's personal document library using semantic similarity. Use when the user asks about their documents or uploaded files.
-- search_web: searches the web for current information. Use when the question requires up-to-date or external information not covered in the user's documents.
+- search_embeddings: searches the user's personal document library using semantic similarity.
+- search_web: searches the web for current or external information.
 
-For general knowledge questions that require neither tool, answer directly.`;
+## Tool selection strategy
+
+1. Call search_embeddings FIRST for any question that could plausibly be answered by an uploaded document (concepts, topics, facts, summaries, comparisons, etc.).
+2. Only use search_web when:
+   - search_embeddings returned "No relevant documents found" or clearly off-topic results, AND the question needs current/external information, OR
+   - the user explicitly asks for recent news, current prices, or live data.
+3. Answer from general knowledge (no tool) only when the question is clearly conversational or the documents and web are both unnecessary.
+
+Never skip search_embeddings to go straight to web or parametric — always check the user's documents first.`;
 
 async function callOpenRouter(msgs: OpenRouterMessage[]): Promise<LLMResponse> {
   const apiKey = process.env.OPENROUTER_API_KEY;
