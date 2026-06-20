@@ -103,7 +103,7 @@ export function MessageBubble({ message }: Props) {
                       {TOOL_LABEL[tc.function.name] ?? tc.function.name}
                       {args.query ? `: "${args.query}"` : ""}
                     </p>
-                    <pre className="whitespace-pre-wrap font-mono text-foreground leading-snug">
+                    <pre className="whitespace-pre-wrap font-sans text-foreground leading-relaxed max-h-48 overflow-y-auto overflow-x-hidden break-words">
                       {tc.result}
                     </pre>
                   </div>
