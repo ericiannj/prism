@@ -111,6 +111,22 @@ describe("ChatPage input chips", () => {
   });
 });
 
+describe("ChatPage thinking bubble", () => {
+  it("shows thinking bubble immediately after submitting while waiting for tokens", async () => {
+    const user = userEvent.setup();
+    // sendMessage never resolves, simulating the server processing delay
+    vi.mocked(api.sendMessage).mockReturnValue(new Promise(() => {}));
+    render(<ChatPage />);
+    await waitFor(() => expect(screen.getByPlaceholderText("Ask something…")).toBeInTheDocument());
+
+    const input = screen.getByPlaceholderText("Ask something…");
+    await user.type(input, "hello");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(screen.getByTestId("thinking-bubble")).toBeInTheDocument());
+  });
+});
+
 describe("ChatPage rename session", () => {
   beforeEach(() => {
     vi.mocked(api.listSessions).mockResolvedValue([

@@ -18,7 +18,7 @@ import {
   type ChatMessage,
   type Document,
 } from "../lib/api";
-import { MessageBubble, StreamingBubble } from "../components/MessageBubble";
+import { MessageBubble, StreamingBubble, ThinkingBubble } from "../components/MessageBubble";
 
 const VALID_SOURCES: ReadonlyArray<string> = ["parametric", "embeddings", "web", "mixed"];
 
@@ -372,7 +372,12 @@ export function ChatPage() {
           {messages.map((m) => (
             <MessageBubble key={m.id} message={m} />
           ))}
-          {isStreaming && streamingContent && <StreamingBubble content={streamingContent} />}
+          {isStreaming &&
+            (streamingContent ? (
+              <StreamingBubble content={streamingContent} />
+            ) : (
+              <ThinkingBubble />
+            ))}
           <div ref={bottomRef} />
         </div>
 

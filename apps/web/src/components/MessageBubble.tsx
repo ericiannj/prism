@@ -138,3 +138,28 @@ export function StreamingBubble({ content }: StreamingBubbleProps) {
     </div>
   );
 }
+
+export function ThinkingBubble() {
+  return (
+    <div className="flex flex-col items-start gap-1" data-testid="thinking-bubble">
+      <div
+        className="px-4 py-3.5 text-foreground"
+        style={{
+          background: "#9b6dff08",
+          border: "1px solid #9b6dff22",
+          borderRadius: "16px 16px 16px 3px",
+        }}
+      >
+        <div className="flex items-center gap-1">
+          {[0, 150, 300].map((delay) => (
+            <span
+              key={delay}
+              className="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-bounce"
+              style={{ animationDelay: `${delay}ms` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
