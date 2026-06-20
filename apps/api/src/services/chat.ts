@@ -1,5 +1,5 @@
 import { db, chatSessions, messages } from "@prism/db";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and } from "drizzle-orm";
 import { TOOL_DEFINITIONS, executeSearchEmbeddings, executeSearchWeb } from "../lib/tools.js";
 
 type MessageSource = "parametric" | "embeddings" | "web" | "mixed";
@@ -82,7 +82,13 @@ export async function runAgentLoop(
   const toolsUsed = new Set<string>();
   const loop = [...conversationMessages];
 
+  const MAX_TOOL_ITERATIONS = 10;
+  let iterations = 0;
+
   while (true) {
+    if (++iterations > MAX_TOOL_ITERATIONS) {
+      throw new Error("Agent loop exceeded maximum iterations");
+    }
     const response = await callOpenRouter(loop);
     const choice = response.choices[0];
     if (!choice) throw new Error("Empty response from LLM");
@@ -97,7 +103,8 @@ export async function runAgentLoop(
 
         if (tc.function.name === "search_embeddings") {
           const args = JSON.parse(tc.function.arguments) as { query: string; limit?: number };
-          result = await executeSearchEmbeddings(args.query, userId, args.limit ?? 5);
+          const safeLimit = Math.min(args.limit ?? 5, 20);
+          result = await executeSearchEmbeddings(args.query, userId, safeLimit);
         } else if (tc.function.name === "search_web") {
           const args = JSON.parse(tc.function.arguments) as { query: string };
           result = await executeSearchWeb(args.query);
@@ -132,7 +139,15 @@ export async function getOrCreateSession(
   userId: string,
   firstMessage: string
 ): Promise<string> {
-  if (sessionId) return sessionId;
+  if (sessionId) {
+    const [existing] = await db
+      .select({ id: chatSessions.id })
+      .from(chatSessions)
+      .where(and(eq(chatSessions.id, sessionId), eq(chatSessions.userId, userId)))
+      .limit(1);
+    if (!existing) throw new Error("Session not found or access denied");
+    return sessionId;
+  }
   const title = firstMessage.slice(0, 60);
   const [session] = await db.insert(chatSessions).values({ userId, title }).returning();
   if (!session) throw new Error("Session insert returned no row");
@@ -144,7 +159,8 @@ export async function loadHistory(sessionId: string): Promise<OpenRouterMessage[
     .select()
     .from(messages)
     .where(eq(messages.sessionId, sessionId))
-    .orderBy(asc(messages.createdAt));
+    .orderBy(asc(messages.createdAt))
+    .limit(50);
 
   return rows.map((m) => ({
     role: m.role as "user" | "assistant",

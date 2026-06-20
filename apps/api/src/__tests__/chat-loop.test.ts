@@ -233,6 +233,42 @@ describe("runAgentLoop", () => {
     expect(result.toolCalls.map((tc) => tc.function.name)).toContain("search_web");
   });
 
+  it("throws after exceeding MAX_TOOL_ITERATIONS to prevent unbounded API calls", async () => {
+    // LLM always responds with a tool call — never finishes
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: null,
+                tool_calls: [
+                  {
+                    id: "call_1",
+                    type: "function",
+                    function: {
+                      name: "search_embeddings",
+                      arguments: JSON.stringify({ query: "test" }),
+                    },
+                  },
+                ],
+              },
+              finish_reason: "tool_calls",
+            },
+          ],
+        }),
+      })
+    );
+
+    const { runAgentLoop } = await import("../services/chat.js");
+    await expect(
+      runAgentLoop([{ role: "user", content: "loop forever" }], "user-1")
+    ).rejects.toThrow("Agent loop exceeded maximum iterations");
+  });
+
   it("includes the tool execution result in each returned toolCall", async () => {
     vi.stubGlobal(
       "fetch",

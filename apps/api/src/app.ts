@@ -1,5 +1,7 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import swaggerUi from "swagger-ui-express";
 import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
 import { documentsRouter } from "./routes/documents.js";
@@ -9,7 +11,8 @@ import { makeRequireAuth } from "./middleware/auth.js";
 
 export function createApp(jwks?: JWTVerifyGetKey): Express {
   const app = express();
-  app.use(cors({ origin: "http://localhost:5173" }));
+  app.use(helmet());
+  app.use(cors({ origin: process.env.WEB_URL ?? "http://localhost:5173" }));
   app.use(express.json());
 
   const activeJwks =
@@ -28,8 +31,22 @@ export function createApp(jwks?: JWTVerifyGetKey): Express {
     res.json({ status: "ok" });
   });
 
+  const chatLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  const ingestLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.post("/documents/ingest", ingestLimiter);
   app.use("/documents", requireAuth, documentsRouter);
-  app.use("/chat", requireAuth, chatRouter);
+  app.use("/chat", requireAuth, chatLimiter, chatRouter);
 
   return app;
 }
