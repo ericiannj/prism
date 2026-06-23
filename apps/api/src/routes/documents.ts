@@ -72,7 +72,7 @@ router.post(
     if (!SUPPORTED_EXTENSIONS.includes(ext)) {
       return res.status(400).json({ error: "Unsupported file type" });
     }
-    const userId = (req as AuthRequest).userId;
+    const userId = (req as unknown as AuthRequest).userId;
     try {
       const document = await ingestDocument(req.file, userId);
       return res.status(201).json({ document });
@@ -105,7 +105,7 @@ router.post(
  *               $ref: '#/components/schemas/Error'
  */
 router.get("/", async (req, res) => {
-  const userId = (req as AuthRequest).userId;
+  const userId = (req as unknown as AuthRequest).userId;
   try {
     const docs = await db
       .select({
@@ -124,7 +124,7 @@ router.get("/", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const userId = (req as AuthRequest).userId;
+  const userId = (req as unknown as AuthRequest).userId;
   const { id } = req.params;
 
   const [existing] = await db

@@ -38,7 +38,7 @@ export async function ingestDocument(
         documentId: doc.id,
         userId,
         content: chunk.content,
-        embedding: embeddings[i],
+        embedding: embeddings[i]!,
         chunkIndex: i,
         metadata: { charStart: chunk.charStart, charEnd: chunk.charEnd },
       }))
@@ -50,6 +50,7 @@ export async function ingestDocument(
       .where(eq(documents.id, doc.id))
       .returning();
 
+    if (!updated) throw new Error("Document update returned no row");
     return updated;
   } catch (error) {
     await db.update(documents).set({ status: "error" }).where(eq(documents.id, doc.id));

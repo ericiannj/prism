@@ -165,7 +165,7 @@ router.get("/sessions", async (req, res) => {
  */
 router.get("/:id/messages", async (req, res) => {
   try {
-    const userId = (req as AuthRequest).userId;
+    const userId = (req as unknown as AuthRequest).userId;
     const sessionId = req.params.id;
 
     // Verify the session belongs to this user
@@ -192,7 +192,7 @@ router.get("/:id/messages", async (req, res) => {
 });
 
 router.patch("/sessions/:id", async (req, res) => {
-  const userId = (req as AuthRequest).userId;
+  const userId = (req as unknown as AuthRequest).userId;
   const { id } = req.params;
   const { title } = req.body as { title?: string };
 
