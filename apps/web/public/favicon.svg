@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 18" width="20" height="18">
+  <polygon points="10,0 0,18 20,18" fill="hsl(263,75%,28%)" />
+  <polygon points="10,0 0,18 7.4,18" fill="hsl(263,78%,65%)" />
+  <polygon points="10,0 7.4,18 12.6,18" fill="hsl(278,70%,76%)" />
+</svg>
