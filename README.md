@@ -1,14 +1,32 @@
-# Prism
+<p align="center">
+  <img src="apps/web/public/favicon.svg" width="72" alt="Prism" />
+</p>
 
-Full-stack RAG platform where users upload documents, embed them into a personal vector store, and query a chat interface that retrieves from three sources: model training, user documents (pgvector), and the web (Tavily). Every assistant message shows which source was used.
+<h1 align="center">Prism</h1>
 
-## Prerequisites
+<p align="center">
+  Full-stack RAG platform where every answer shows exactly where it came from.
+</p>
+
+## Why
+
+Most AI chat tools are a black box — you never know if the answer came from the model's training, something you uploaded, or the web. Prism makes the source of every response explicit, so you can trust the answer and trace it back.
+
+## Features
+
+- **Document Upload & Embedding** — Upload PDFs and text files; they're chunked, embedded, and stored in your personal vector store (pgvector). Your documents become a private, queryable knowledge base.
+- **Hybrid RAG** — Every query draws from three sources in parallel: model training, your documents (pgvector semantic search), and live web results (Tavily).
+- **Source Attribution** — Every assistant message shows which source answered: model, documents, or web. No guessing.
+- **Auth** — Google OAuth and email/password via Better Auth. Each user's document store is fully isolated.
+- **Full-Stack Monorepo** — React (Vite) frontend, Express API, PostgreSQL + pgvector, all orchestrated with Turborepo and pnpm workspaces.
+
+## Quick Start
+
+### Prerequisites
 
 - Node.js 20+
 - pnpm 9+
 - Docker
-
-## Quick Start
 
 ```bash
 # 1. Clone and install
@@ -27,6 +45,8 @@ pnpm dev
 ```
 
 Open http://localhost:5173
+
+> Register at http://localhost:5173/register to create an account before using the app.
 
 ## Dev Commands
 
@@ -61,8 +81,6 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 ```
 
-> Register at http://localhost:5173/register to create an account before using the app.
-
 ## Production
 
 ```bash
@@ -73,7 +91,7 @@ cp .env.prod.example .env.prod
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-The web app will be available at http://localhost (port 80).
+The web app will be available at port 80. On a local machine: http://localhost — on a remote server, replace with the server's IP or domain.
 
 ## Architecture
 
