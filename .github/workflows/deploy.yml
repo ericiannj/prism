@@ -1,0 +1,105 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── 1. Build frontend ──────────────────────────────────────────────────
+      - name: Build frontend
+        env:
+          VITE_API_URL: https://api.prism.ericjunqueira.com
+          VITE_AUTH_URL: https://auth.prism.ericjunqueira.com
+          VITE_WEB_URL: https://prism.ericjunqueira.com
+        run: pnpm turbo build --filter=@prism/web --force
+
+      # ── 2 & 3. Upload to S3 + invalidate CloudFront ────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload assets to S3
+        run: |
+          aws s3 sync apps/web/dist/ "s3://${{ secrets.S3_BUCKET }}/" \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "index.html"
+
+          aws s3 cp apps/web/dist/index.html "s3://${{ secrets.S3_BUCKET }}/index.html" \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CF_DISTRIBUTION_ID }}" \
+            --paths "/*" \
+            --query "Invalidation.Status" \
+            --output text
+
+      # ── 4 & 5. Sync source + rebuild containers on EC2 ────────────────────
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/prism_key
+          chmod 600 ~/.ssh/prism_key
+
+      - name: Sync source to EC2
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/prism_key -o StrictHostKeyChecking=no" \
+            --exclude=".git" \
+            --exclude="node_modules" \
+            --exclude="apps/web/dist" \
+            --exclude="**/dist" \
+            --exclude="**/.turbo" \
+            ./ "${{ secrets.EC2_HOST }}:${{ secrets.EC2_DIR }}/"
+
+      - name: Rebuild images and restart containers on EC2
+        run: |
+          ssh -i ~/.ssh/prism_key -o StrictHostKeyChecking=no "${{ secrets.EC2_HOST }}" << 'REMOTE'
+            set -euo pipefail
+            cd "${{ secrets.EC2_DIR }}"
+
+            echo "-> Building prism-api..."
+            docker build -f apps/api/Dockerfile -t prism-api:latest .
+
+            echo "-> Building prism-auth..."
+            docker build -f apps/auth/Dockerfile -t prism-auth:latest .
+
+            echo "-> Restarting containers..."
+            docker stop prism-api-1 prism-auth-1 2>/dev/null || true
+            docker rm   prism-api-1 prism-auth-1 2>/dev/null || true
+
+            docker run -d --name prism-api-1  --env-file .env.prod -p 3000:3000 --restart always prism-api:latest
+            docker run -d --name prism-auth-1 --env-file .env.prod -p 3001:3001 --restart always prism-auth:latest
+
+            docker ps --format 'table {{.Names}}\t{{.Status}}'
+
+            echo "-> Pruning old images..."
+            docker image prune -f
+          REMOTE
