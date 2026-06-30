@@ -85,21 +85,20 @@ jobs:
             set -euo pipefail
             cd "${{ secrets.EC2_DIR }}"
 
+            echo "-> Stopping containers and freeing disk space..."
+            docker stop prism-api-1 prism-auth-1 2>/dev/null || true
+            docker rm   prism-api-1 prism-auth-1 2>/dev/null || true
+            docker system prune -af
+
             echo "-> Building prism-api..."
             docker build -f apps/api/Dockerfile -t prism-api:latest .
 
             echo "-> Building prism-auth..."
             docker build -f apps/auth/Dockerfile -t prism-auth:latest .
 
-            echo "-> Restarting containers..."
-            docker stop prism-api-1 prism-auth-1 2>/dev/null || true
-            docker rm   prism-api-1 prism-auth-1 2>/dev/null || true
-
+            echo "-> Starting containers..."
             docker run -d --name prism-api-1  --env-file .env.prod -p 3000:3000 --restart always prism-api:latest
             docker run -d --name prism-auth-1 --env-file .env.prod -p 3001:3001 --restart always prism-auth:latest
 
             docker ps --format 'table {{.Names}}\t{{.Status}}'
-
-            echo "-> Pruning old images..."
-            docker image prune -f
           REMOTE
