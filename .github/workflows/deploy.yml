@@ -1,8 +1,9 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main]
+  # Paused: the EC2/RDS backend was decommissioned on 2026-10-28.
+  # See docs/superpowers/plans/2026-10-28-neon-lambda-migration.md
+  workflow_dispatch:
 
 jobs:
   deploy:
